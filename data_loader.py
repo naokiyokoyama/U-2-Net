@@ -1,15 +1,18 @@
 # data loader
-from __future__ import print_function, division
+from __future__ import division, print_function
+
 import glob
-import torch
-from skimage import io, transform, color
-import numpy as np
-import random
 import math
+import random
+
 import matplotlib.pyplot as plt
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms, utils
+import numpy as np
+import torch
 from PIL import Image
+from skimage import color, io, transform
+from torch.utils.data import DataLoader, Dataset
+from torchvision import transforms, utils
+
 
 #==========================dataset load==========================
 class RescaleT(object):
@@ -239,8 +242,10 @@ class SalObjDataset(Dataset):
 		# image = Image.open(self.image_name_list[idx])#io.imread(self.image_name_list[idx])
 		# label = Image.open(self.label_name_list[idx])#io.imread(self.label_name_list[idx])
 
-		image = io.imread(self.image_name_list[idx])
-		imname = self.image_name_list[idx]
+		if isinstance(self.image_name_list[idx], str):
+			image = io.imread(self.image_name_list[idx])
+		else:
+			image = self.image_name_list[idx]
 		imidx = np.array([idx])
 
 		if(0==len(self.label_name_list)):
