@@ -34,7 +34,8 @@ def get_mask(height, width, pred):
     # Remove small values
     _, mask = cv2.threshold(mask, 30, 255, cv2.THRESH_TOZERO)
     # Extract only largest contour
-    mask = contour_mask(mask)
+    largest_contour = contour_mask(mask)
+    mask[largest_contour == 0] = 0
     return mask
 
 
@@ -92,7 +93,9 @@ def main():
     orig_frames = []
     rgb_frames = []
     for _ in tqdm.trange(total_num_frames):
-        _, frame = vid.read()
+        ret, frame = vid.read()
+        if not ret:
+            break
         orig_frames.append(frame)
         rgb_frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
     height, width = orig_frames[0].shape[:2]
@@ -152,14 +155,19 @@ def main():
         cv2.imwrite(out_path, bgra_object)
 
     # --------- 6. generate video for visualization ---------
+    print("Generating visualization video...")
     four_cc = cv2.VideoWriter_fourcc(*"MP4V")
     out_vid = None
     for idx in tqdm.trange(len(orig_frames)):
         img, mask = orig_frames[idx], masks[idx]
-        object_only = img.copy()
-        object_only[mask==0] = (255,255,255)
+        object_only = np.float32(img.copy())
+        mask_f = mask.astype(np.float32) / 255
+        mask_f = np.reshape(mask_f, (*mask_f.shape[:2], 1))
+        object_only = cv2.add(
+            object_only * mask_f, np.ones_like(object_only) * (1.0 - mask_f) * 255
+        ).astype(np.uint8)
         mask_bgr = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
-        viz_frame = np.vstack([img, object_only, mask_bgr])
+        viz_frame = np.vstack([img, mask_bgr, object_only])
         # Make the video have a max height of 720
         scale = 720 / (height * 3)
         viz_frame = cv2.resize(
